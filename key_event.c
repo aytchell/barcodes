@@ -19,6 +19,9 @@
 #define KEY_PRESSED 1
 #define KEY_CONTINUED 2
 
+#define SCANNER_VENDOR_ID   0x28e9
+#define SCANNER_PRODUCT_ID  0x03d9
+
 void print_input(struct input_buffer *buffer)
 {
     fprintf(stdout, "Read input '%s'\n", buffer->text);
@@ -39,6 +42,16 @@ char decode_input(int key_code)
         case KEY_7: return '7';
         case KEY_8: return '8';
         case KEY_9: return '9';
+        case KEY_KP0: return '0';
+        case KEY_KP1: return '1';
+        case KEY_KP2: return '2';
+        case KEY_KP3: return '3';
+        case KEY_KP4: return '4';
+        case KEY_KP5: return '5';
+        case KEY_KP6: return '6';
+        case KEY_KP7: return '7';
+        case KEY_KP8: return '8';
+        case KEY_KP9: return '9';
     }
 
     return '?';
@@ -49,6 +62,7 @@ void handle_key_released(struct input_event *ev, struct input_buffer *buffer)
     switch (ev->code)
     {
         case KEY_ENTER:
+        case KEY_KPENTER:
             print_input(buffer);
             break;
 
@@ -62,6 +76,16 @@ void handle_key_released(struct input_event *ev, struct input_buffer *buffer)
         case KEY_7:
         case KEY_8:
         case KEY_9:
+        case KEY_KP0:
+        case KEY_KP1:
+        case KEY_KP2:
+        case KEY_KP3:
+        case KEY_KP4:
+        case KEY_KP5:
+        case KEY_KP6:
+        case KEY_KP7:
+        case KEY_KP8:
+        case KEY_KP9:
             buffer_append(buffer, decode_input(ev->code));
             break;
 
@@ -185,6 +209,20 @@ struct libevdev* init_device(const char* device_name)
         return NULL;
     }
 
+    print_device_info(device_name, dev);
+
+    if ((libevdev_get_id_product(dev) == SCANNER_PRODUCT_ID) &&
+            (libevdev_get_id_vendor(dev) == SCANNER_VENDOR_ID))
+    {
+        fprintf(stdout, "\nDetected Barcode-Scanner. Grabbing device\n");
+        const int rc = libevdev_grab(dev, LIBEVDEV_GRAB);
+        if (rc != 0)
+        {
+            fprintf(stderr,
+                    "Failed to grab device (still accessible for others)\n");
+        }
+    }
+
     return dev;
 }
 
@@ -192,6 +230,7 @@ void deinit_device(struct libevdev *dev)
 {
     const int fd = libevdev_get_fd(dev);
 
+    libevdev_grab(dev, LIBEVDEV_UNGRAB);
     libevdev_free(dev);
     close(fd);
 }
@@ -214,7 +253,6 @@ int main(int argc, char* argv[]) {
 
     if (dev != NULL)
     {
-        print_device_info(device, dev);
         poll_device(dev);
         deinit_device(dev);
     }
