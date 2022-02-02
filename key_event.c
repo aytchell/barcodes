@@ -43,16 +43,6 @@ char decode_input(int key_code)
         case KEY_7: return '7';
         case KEY_8: return '8';
         case KEY_9: return '9';
-        case KEY_KP0: return '0';
-        case KEY_KP1: return '1';
-        case KEY_KP2: return '2';
-        case KEY_KP3: return '3';
-        case KEY_KP4: return '4';
-        case KEY_KP5: return '5';
-        case KEY_KP6: return '6';
-        case KEY_KP7: return '7';
-        case KEY_KP8: return '8';
-        case KEY_KP9: return '9';
     }
 
     return '?';
@@ -63,7 +53,6 @@ void handle_key_released(struct input_event *ev, struct input_buffer *buffer)
     switch (ev->code)
     {
         case KEY_ENTER:
-        case KEY_KPENTER:
             print_input(buffer);
             break;
 
@@ -77,16 +66,6 @@ void handle_key_released(struct input_event *ev, struct input_buffer *buffer)
         case KEY_7:
         case KEY_8:
         case KEY_9:
-        case KEY_KP0:
-        case KEY_KP1:
-        case KEY_KP2:
-        case KEY_KP3:
-        case KEY_KP4:
-        case KEY_KP5:
-        case KEY_KP6:
-        case KEY_KP7:
-        case KEY_KP8:
-        case KEY_KP9:
             buffer_append(buffer, decode_input(ev->code));
             break;
 
