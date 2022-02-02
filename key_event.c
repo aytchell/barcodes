@@ -12,6 +12,7 @@
 #include <errno.h>
 
 #include "input_buffer.h"
+#include "input_device.h"
 
 // I didn't find named constants in the headers of libevdev or linux
 // so I defined my own based on experimentation
@@ -190,70 +191,13 @@ void print_device_info(const char *device, struct libevdev *dev)
     printf("Driver version '%i'\n", libevdev_get_driver_version(dev));
 }
 
-struct libevdev* init_device(const char* device_name)
-{
-    struct libevdev* dev = NULL;
-
-    const int fd = open(device_name, O_RDONLY | O_NONBLOCK);
-    if (fd < 0)
-    {
-        fprintf(stderr, "Failed to open '%s'\n", device_name);
-        return NULL;
-    }
-
-    const int rc = libevdev_new_from_fd(fd, &dev);
-    if (rc < 0)
-    {
-        close(fd);
-        fprintf(stderr, "Failed to init libevdev (%s)\n", strerror(-rc));
-        return NULL;
-    }
-
-    print_device_info(device_name, dev);
-
-    if ((libevdev_get_id_product(dev) == SCANNER_PRODUCT_ID) &&
-            (libevdev_get_id_vendor(dev) == SCANNER_VENDOR_ID))
-    {
-        fprintf(stdout, "\nDetected Barcode-Scanner. Grabbing device\n");
-        const int rc = libevdev_grab(dev, LIBEVDEV_GRAB);
-        if (rc != 0)
-        {
-            fprintf(stderr,
-                    "Failed to grab device (still accessible for others)\n");
-        }
-    }
-
-    return dev;
-}
-
-void deinit_device(struct libevdev *dev)
-{
-    const int fd = libevdev_get_fd(dev);
-
-    libevdev_grab(dev, LIBEVDEV_UNGRAB);
-    libevdev_free(dev);
-    close(fd);
-}
-
-const char* get_device_name(int argc, char *argv[])
-{
-    if (argc > 1)
-    {
-        return argv[1];
-    }
-    else
-    {
-        return "/dev/input/event0";
-    }
-}
-
 int main(int argc, char* argv[]) {
-    const char* device = get_device_name(argc, argv);
-    struct libevdev *dev = init_device(device);
+    struct input_device input;
+    init_device_struct(&input, SCANNER_VENDOR_ID, SCANNER_PRODUCT_ID);
 
-    if (dev != NULL)
+    if (0 == grab_input_device(&input))
     {
-        poll_device(dev);
-        deinit_device(dev);
+        poll_device(input.evdev);
+        close_input_device(&input);
     }
 }
