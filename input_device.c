@@ -135,3 +135,20 @@ void close_input_device(struct input_device *dev)
         dev->filename[0] = '\0';
     }
 }
+
+void print_device_info(struct input_device *dev)
+{
+    if (dev == NULL || dev->evdev == NULL) return;
+
+    struct libevdev *evdev = dev->evdev;
+
+    printf("Event info for '%s'\n", dev->filename);
+    printf("Input device name '%s'\n", libevdev_get_name(evdev));
+    printf("Physical location '%s'\n", libevdev_get_phys(evdev));
+    printf("Unique identifier '%s'\n", libevdev_get_uniq(evdev));
+    printf("Product ID '%i'\n", libevdev_get_id_product(evdev));
+    printf("Vendor ID '%i'\n", libevdev_get_id_vendor(evdev));
+    printf("Bustype ID '%i'\n", libevdev_get_id_bustype(evdev));
+    printf("Version ID '%i'\n", libevdev_get_id_version(evdev));
+    printf("Driver version '%i'\n", libevdev_get_driver_version(evdev));
+}

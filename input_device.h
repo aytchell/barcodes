@@ -22,5 +22,6 @@ int grab_input_device(struct input_device *dev);
 
 void close_input_device(struct input_device *dev);
 
+void print_device_info(struct input_device *dev);
 
 #endif // FILE_SCANNER_H

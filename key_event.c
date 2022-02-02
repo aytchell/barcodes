@@ -157,25 +157,13 @@ void poll_device(struct libevdev *dev)
     }
 }
 
-void print_device_info(const char *device, struct libevdev *dev)
-{
-    printf("Event info for '%s'\n", device);
-    printf("Input device name '%s'\n", libevdev_get_name(dev));
-    printf("Physical location '%s'\n", libevdev_get_phys(dev));
-    printf("Unique identifier '%s'\n", libevdev_get_uniq(dev));
-    printf("Product ID '%i'\n", libevdev_get_id_product(dev));
-    printf("Vendor ID '%i'\n", libevdev_get_id_vendor(dev));
-    printf("Bustype ID '%i'\n", libevdev_get_id_bustype(dev));
-    printf("Version ID '%i'\n", libevdev_get_id_version(dev));
-    printf("Driver version '%i'\n", libevdev_get_driver_version(dev));
-}
-
 int main(int argc, char* argv[]) {
     struct input_device input;
     init_device_struct(&input, SCANNER_VENDOR_ID, SCANNER_PRODUCT_ID);
 
     if (0 == grab_input_device(&input))
     {
+        // print_device_info(&input);
         poll_device(input.evdev);
         close_input_device(&input);
     }
