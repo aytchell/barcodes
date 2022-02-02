@@ -161,10 +161,13 @@ int main(int argc, char* argv[]) {
     struct input_device input;
     init_device_struct(&input, SCANNER_VENDOR_ID, SCANNER_PRODUCT_ID);
 
-    if (0 == grab_input_device(&input))
+    const int rc = grab_input_device(&input);
+    if (0 == rc)
     {
         // print_device_info(&input);
         poll_device(input.evdev);
         close_input_device(&input);
     }
+
+    return rc;
 }
