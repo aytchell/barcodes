@@ -13,6 +13,8 @@
 
 #include "input_buffer.h"
 #include "input_device.h"
+#include "send_http.h"
+#include "config.h"
 
 // I didn't find named constants in the headers of libevdev or linux
 // so I defined my own based on experimentation
@@ -23,22 +25,11 @@
 #define SCANNER_VENDOR_ID   0x28e9
 #define SCANNER_PRODUCT_ID  0x03d9
 
-#define TRUE (1 == 1)
-#define FALSE (!(TRUE))
-
 #define NONPRIV_GROUP_ID    1000
 #define NONPRIV_USER_ID     1000
 
 #define NEVER_TIMEOUT       -1
-
-struct config
-{
-    int scanner_vendor_id;
-    int scanner_product_id;
-    int nonpriv_gid;
-    int nonpriv_uid;
-    int scan_timeout;
-};
+#define JAMBEL_EVENT_URL    "http://localhost:8080/event-input/558a4918-54a7-492c-b268-3790f4d5f0f5"
 
 int drop_priviledges(const struct config *config)
 {
@@ -65,10 +56,9 @@ int drop_priviledges(const struct config *config)
     return TRUE;
 }
 
-void process_read_buffer(struct input_buffer *buffer,
-        const struct config *config)
+void process_read_buffer(struct input_buffer *buffer, struct http_handle *http)
 {
-    fprintf(stdout, "Read input '%s'\n", buffer->text);
+    send_http_event(http, buffer);
     buffer_clear(buffer);
 }
 
@@ -92,12 +82,12 @@ char decode_input(int key_code)
 }
 
 void handle_key_released(struct input_event *ev,
-        struct input_buffer *buffer, const struct config *config)
+        struct input_buffer *buffer, struct http_handle *http)
 {
     switch (ev->code)
     {
         case KEY_ENTER:
-            process_read_buffer(buffer, config);
+            process_read_buffer(buffer, http);
             break;
 
         case KEY_0:
@@ -122,7 +112,7 @@ void handle_key_released(struct input_event *ev,
 }
 
 int handle_device_event(struct libevdev *dev, struct input_buffer *buffer,
-        const struct config *config)
+        struct http_handle *http)
 {
     int rc = 0;
     struct input_event ev;
@@ -133,7 +123,7 @@ int handle_device_event(struct libevdev *dev, struct input_buffer *buffer,
         {
             if ((ev.type == EV_KEY) && (ev.value == KEY_RELEASED))
             {
-                handle_key_released(&ev, buffer, config);
+                handle_key_released(&ev, buffer, http);
             }
         }
     } while (rc == 1 || rc == 0);
@@ -141,11 +131,11 @@ int handle_device_event(struct libevdev *dev, struct input_buffer *buffer,
 }
 
 int read_device_event(int revents, struct libevdev *dev,
-        struct input_buffer *buffer, const struct config *config)
+        struct input_buffer *buffer, struct http_handle *http)
 {
     if (revents & POLLIN)
     {
-        return handle_device_event(dev, buffer, config);
+        return handle_device_event(dev, buffer, http);
     }
 
     switch (revents & (POLLERR | POLLRDHUP))
@@ -167,7 +157,8 @@ int read_device_event(int revents, struct libevdev *dev,
     return -1;
 }
 
-void poll_device(struct libevdev *dev, const struct config *config)
+void poll_device(struct libevdev *dev, const struct config *config,
+        struct http_handle *http)
 {
     int rc = 0;
     struct pollfd fds[1];
@@ -189,7 +180,7 @@ void poll_device(struct libevdev *dev, const struct config *config)
         rc = poll(fds, 1, timeout);
         if (rc > 0)
         {
-            if (0 != read_device_event(fds[0].revents, dev, &buffer, config))
+            if (0 != read_device_event(fds[0].revents, dev, &buffer, http))
             {
                 return;
             }
@@ -213,15 +204,24 @@ int grab_scanner_and_scan(const struct config *config)
     if (0 == rc)
     {
         drop_priviledges(config);
+
+        struct http_handle *http = http_handle_new(config);
+        if (http == NULL)
+        {
+            fprintf(stderr, "Failed to create HTTP handle\n");
+            close_input_device(&input);
+            return -1;
+        }
+
         // print_device_info(&input);
-        poll_device(input.evdev, config);
+        poll_device(input.evdev, config, http);
         close_input_device(&input);
     }
 
     return rc;
 }
 
-int main(int argc, char* argv[])
+int main()
 {
     struct config config;
 
@@ -230,6 +230,7 @@ int main(int argc, char* argv[])
     config.nonpriv_gid = NONPRIV_GROUP_ID;
     config.nonpriv_uid = NONPRIV_USER_ID;
     config.scan_timeout = NEVER_TIMEOUT;
+    strncpy(config.http_target_url, JAMBEL_EVENT_URL, 512);
 
-    grab_scanner_and_scan(&config);
+    return grab_scanner_and_scan(&config);
 }
