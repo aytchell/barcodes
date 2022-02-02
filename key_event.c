@@ -23,7 +23,50 @@
 #define SCANNER_VENDOR_ID   0x28e9
 #define SCANNER_PRODUCT_ID  0x03d9
 
-void print_input(struct input_buffer *buffer)
+#define TRUE (1 == 1)
+#define FALSE (!(TRUE))
+
+#define NONPRIV_GROUP_ID    1000
+#define NONPRIV_USER_ID     1000
+
+#define NEVER_TIMEOUT       -1
+
+struct config
+{
+    int scanner_vendor_id;
+    int scanner_product_id;
+    int nonpriv_gid;
+    int nonpriv_uid;
+    int scan_timeout;
+};
+
+int drop_priviledges(const struct config *config)
+{
+    if (getuid() != 0)
+    {
+        fprintf(stdout, "Already running as non-root\n");
+        return TRUE;
+    }
+
+    fprintf(stdout, "Dropping root-priviledges\n");
+
+    // it's important to first change group id - then user id
+    if (setgid(config->nonpriv_gid) != 0)
+    {
+        fprintf(stderr, "Failed to change gid: %s\n", strerror(errno));
+        return FALSE;
+    }
+    if (setuid(config->nonpriv_uid) != 0)
+    {
+        fprintf(stderr, "Failed to change uid: %s\n", strerror(errno));
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+void process_read_buffer(struct input_buffer *buffer,
+        const struct config *config)
 {
     fprintf(stdout, "Read input '%s'\n", buffer->text);
     buffer_clear(buffer);
@@ -48,12 +91,13 @@ char decode_input(int key_code)
     return '?';
 }
 
-void handle_key_released(struct input_event *ev, struct input_buffer *buffer)
+void handle_key_released(struct input_event *ev,
+        struct input_buffer *buffer, const struct config *config)
 {
     switch (ev->code)
     {
         case KEY_ENTER:
-            print_input(buffer);
+            process_read_buffer(buffer, config);
             break;
 
         case KEY_0:
@@ -77,7 +121,8 @@ void handle_key_released(struct input_event *ev, struct input_buffer *buffer)
     }
 }
 
-int handle_device_event(struct libevdev *dev, struct input_buffer *buffer)
+int handle_device_event(struct libevdev *dev, struct input_buffer *buffer,
+        const struct config *config)
 {
     int rc = 0;
     struct input_event ev;
@@ -88,7 +133,7 @@ int handle_device_event(struct libevdev *dev, struct input_buffer *buffer)
         {
             if ((ev.type == EV_KEY) && (ev.value == KEY_RELEASED))
             {
-                handle_key_released(&ev, buffer);
+                handle_key_released(&ev, buffer, config);
             }
         }
     } while (rc == 1 || rc == 0);
@@ -96,11 +141,11 @@ int handle_device_event(struct libevdev *dev, struct input_buffer *buffer)
 }
 
 int read_device_event(int revents, struct libevdev *dev,
-        struct input_buffer *buffer)
+        struct input_buffer *buffer, const struct config *config)
 {
     if (revents & POLLIN)
     {
-        return handle_device_event(dev, buffer);
+        return handle_device_event(dev, buffer, config);
     }
 
     switch (revents & (POLLERR | POLLRDHUP))
@@ -122,11 +167,11 @@ int read_device_event(int revents, struct libevdev *dev,
     return -1;
 }
 
-void poll_device(struct libevdev *dev)
+void poll_device(struct libevdev *dev, const struct config *config)
 {
     int rc = 0;
     struct pollfd fds[1];
-    int timeout = 5000;
+    const int timeout = config->scan_timeout;
     struct input_buffer buffer;
 
     if (!buffer_new(512, &buffer))
@@ -144,7 +189,7 @@ void poll_device(struct libevdev *dev)
         rc = poll(fds, 1, timeout);
         if (rc > 0)
         {
-            if (0 != read_device_event(fds[0].revents, dev, &buffer))
+            if (0 != read_device_event(fds[0].revents, dev, &buffer, config))
             {
                 return;
             }
@@ -157,17 +202,34 @@ void poll_device(struct libevdev *dev)
     }
 }
 
-int main(int argc, char* argv[]) {
+int grab_scanner_and_scan(const struct config *config)
+{
     struct input_device input;
-    init_device_struct(&input, SCANNER_VENDOR_ID, SCANNER_PRODUCT_ID);
+    init_device_struct(&input,
+            config->scanner_vendor_id,
+            config->scanner_product_id);
 
     const int rc = grab_input_device(&input);
     if (0 == rc)
     {
+        drop_priviledges(config);
         // print_device_info(&input);
-        poll_device(input.evdev);
+        poll_device(input.evdev, config);
         close_input_device(&input);
     }
 
     return rc;
+}
+
+int main(int argc, char* argv[])
+{
+    struct config config;
+
+    config.scanner_vendor_id = SCANNER_VENDOR_ID;
+    config.scanner_product_id = SCANNER_PRODUCT_ID;
+    config.nonpriv_gid = NONPRIV_GROUP_ID;
+    config.nonpriv_uid = NONPRIV_USER_ID;
+    config.scan_timeout = NEVER_TIMEOUT;
+
+    grab_scanner_and_scan(&config);
 }
