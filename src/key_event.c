@@ -30,6 +30,7 @@
 
 #define NEVER_TIMEOUT       -1
 #define JAMBEL_EVENT_URL    "http://localhost:8080/event-input/558a4918-54a7-492c-b268-3790f4d5f0f5"
+#define HTTP_CONTENT_TYPE   "application/vnd.com.github.aytchell.eventvalue-v1+json"
 
 int drop_priviledges(const struct config *config)
 {
@@ -230,7 +231,9 @@ int main()
     config.nonpriv_gid = NONPRIV_GROUP_ID;
     config.nonpriv_uid = NONPRIV_USER_ID;
     config.scan_timeout = NEVER_TIMEOUT;
-    strncpy(config.http_target_url, JAMBEL_EVENT_URL, 512);
+    strncpy(config.http_upload_verb, "PUT", 5);
+    strncpy(config.http_target_url, JAMBEL_EVENT_URL, MAX_TARGET_URL_LEN);
+    strncpy(config.http_content_type, JAMBEL_EVENT_URL, MAX_CONTENT_TYPE_LEN);
 
     return grab_scanner_and_scan(&config);
 }

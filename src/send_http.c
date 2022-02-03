@@ -13,9 +13,6 @@ struct http_handle
     char body[MAX_BODY_SIZE];
 };
 
-static const char* const content_type = 
-"Content-Type: application/vnd.com.github.aytchell.eventvalue-v1+json";
-
 static const char* const body_template = "{ \"payload\" : \"%s\" }\r\n";
 
 static size_t dev_null(
@@ -49,10 +46,14 @@ struct http_handle* http_handle_new(const struct config *config)
         return NULL;
     }
 
+    char content_type[MAX_CONTENT_TYPE_LEN + 20];
+    snprintf(content_type, MAX_CONTENT_TYPE_LEN + 20, "Content-Type: %s",
+            config->http_content_type);
     handle->headers = curl_slist_append(handle->headers, content_type);
     curl_easy_setopt(handle->curl, CURLOPT_HTTPHEADER, handle->headers);
     curl_easy_setopt(handle->curl, CURLOPT_URL, config->http_target_url);
-    curl_easy_setopt(handle->curl, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_easy_setopt(handle->curl, CURLOPT_CUSTOMREQUEST,
+            config->http_upload_verb);
     curl_easy_setopt(handle->curl, CURLOPT_WRITEFUNCTION, dev_null);
 
     // CURLOPT_POSTFIELDS and CURLOPT_POSTFIELDSIZE will be set when
