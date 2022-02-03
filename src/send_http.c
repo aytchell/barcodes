@@ -1,4 +1,5 @@
 #include <curl/curl.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,10 +11,11 @@ struct http_handle
 {
     CURL *curl;
     struct curl_slist *headers;
+    char json_name[MAX_PAYLOAD_NAME_LEN + 1];
     char body[MAX_BODY_SIZE];
 };
 
-static const char* const body_template = "{ \"payload\" : \"%s\" }\r\n";
+static const char* const body_template = "{ \"%s\" : \"%s\" }\r\n";
 
 static size_t dev_null(
         __attribute__((unused)) char *ptr,
@@ -45,6 +47,9 @@ struct http_handle* http_handle_new(const struct config *config)
         http_handle_delete(handle);
         return NULL;
     }
+
+    strncpy(handle->json_name, config->http_json_payload_name,
+            MAX_PAYLOAD_NAME_LEN);
 
     char content_type[MAX_CONTENT_TYPE_LEN + 20];
     snprintf(content_type, MAX_CONTENT_TYPE_LEN + 20, "Content-Type: %s",
@@ -84,7 +89,8 @@ void http_handle_delete(struct http_handle *handle)
 static long write_http_body(struct http_handle *handle,
         const struct input_buffer *buffer)
 {
-    return snprintf(handle->body, MAX_BODY_SIZE, body_template, buffer->text);
+    return snprintf(handle->body, MAX_BODY_SIZE,
+            body_template, handle->json_name, buffer->text);
 }
 
 void send_http_event(struct http_handle *handle,

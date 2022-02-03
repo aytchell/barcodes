@@ -231,9 +231,10 @@ int main()
     config.nonpriv_gid = NONPRIV_GROUP_ID;
     config.nonpriv_uid = NONPRIV_USER_ID;
     config.scan_timeout = NEVER_TIMEOUT;
-    strncpy(config.http_upload_verb, "PUT", 5);
+    strncpy(config.http_upload_verb, "PUT", MAX_UPLOAD_VERB_LEN);
     strncpy(config.http_target_url, JAMBEL_EVENT_URL, MAX_TARGET_URL_LEN);
     strncpy(config.http_content_type, JAMBEL_EVENT_URL, MAX_CONTENT_TYPE_LEN);
+    strncpy(config.http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
 
     return grab_scanner_and_scan(&config);
 }
