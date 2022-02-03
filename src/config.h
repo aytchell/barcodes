@@ -23,5 +23,7 @@ struct config
     char http_json_payload_name[MAX_PAYLOAD_NAME_LEN + 1];
 };
 
+int read_config(struct config *config);
+
 
 #endif // CONFIG_H
