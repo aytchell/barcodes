@@ -18,6 +18,7 @@ struct config
     int nonpriv_uid;
     int scan_timeout;
     int log_threshold; // log only if level <= log_threshold
+    int log_to_syslog;
     char http_upload_verb[MAX_UPLOAD_VERB_LEN + 1];
     char http_target_url[MAX_TARGET_URL_LEN + 1];
     char http_content_type[MAX_CONTENT_TYPE_LEN + 1];

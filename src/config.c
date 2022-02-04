@@ -20,6 +20,7 @@ static void set_defaults(struct config *config)
     config->nonpriv_uid = NONPRIV_USER_ID;
     config->scan_timeout = NEVER_TIMEOUT;
     config->log_threshold = LOG_DEBUG;
+    config->log_to_syslog = FALSE;
     strncpy(config->http_upload_verb, "PUT", MAX_UPLOAD_VERB_LEN);
     strncpy(config->http_target_url, JAMBEL_EVENT_URL, MAX_TARGET_URL_LEN);
     strncpy(config->http_content_type, HTTP_CONTENT_TYPE, MAX_CONTENT_TYPE_LEN);

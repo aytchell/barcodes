@@ -1,16 +1,54 @@
 #include <stdio.h>
+#include <syslog.h>
 #include <stdarg.h>
 
 #include "logger.h"
 
 #define MAX_LOG_MSG_LEN     256
 
+
+static void logger_log_printf(int prio, const char *format, va_list args);
+static void logger_log_syslog(int prio, const char *format, va_list args);
+
 static int threshold = LOG_INFO;
+static void (*log_function)(int, const char *, va_list ) = &logger_log_printf;
 
 int logger_init(const struct config *config)
 {
     threshold = config->log_threshold;
+
+    if (config->log_to_syslog)
+    {
+        log_function = &logger_log_syslog;
+        openlog("barcodes", LOG_CONS, LOG_USER);
+    }
+
     return TRUE;
+}
+
+int would_log(int prio)
+{
+    return prio <= threshold;
+}
+
+void logger_log(int prio, const char *format, ...)
+{
+    va_list args;
+
+    if (prio > threshold)
+        return;
+
+    va_start(args, format);
+    log_function(prio, format, args);
+    va_end(args);
+}
+
+void logger_deinit()
+{
+    if (log_function == logger_log_syslog)
+    {
+        closelog();
+    }
 }
 
 static const char* level_name(int prio)
@@ -29,22 +67,10 @@ static const char* level_name(int prio)
     }
 }
 
-int would_log(int prio)
-{
-    return prio <= threshold;
-}
-
-void logger_log(int prio, const char *format, ...)
+static void logger_log_printf(int prio, const char *format, va_list args)
 {
     char message[MAX_LOG_MSG_LEN];
-    va_list args;
-
-    if (prio > threshold)
-        return;
-
-    va_start(args, format);
     vsnprintf(message, MAX_LOG_MSG_LEN, format, args);
-    va_end(args);
 
     if (prio <= LOG_WARNING)
     {
@@ -56,6 +82,7 @@ void logger_log(int prio, const char *format, ...)
     }
 }
 
-void logger_deinit()
+static void logger_log_syslog(int prio, const char *format, va_list args)
 {
+    vsyslog(prio, format, args);
 }
