@@ -49,6 +49,7 @@ int drop_priviledges(const struct config *config)
 
 void process_read_buffer(struct input_buffer *buffer, struct http_handle *http)
 {
+    logger_log(LOG_INFO, "Read barcode: %s", buffer->text);
     send_http_event(http, buffer);
     buffer_clear(buffer);
 }

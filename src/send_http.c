@@ -108,7 +108,13 @@ void send_http_event(struct http_handle *handle,
     curl_easy_setopt(handle->curl, CURLOPT_POSTFIELDS, handle->body);
 
     logger_log(LOG_NOTICE, "Uploading barcode to REST endpoint");
-    logger_log(LOG_DEBUG, "Request body is '%s'", handle->body);
+    if (would_log(LOG_DEBUG))
+    {
+        const int len = strlen(handle->body);
+        // don't print the newline from the body (see body_template)
+        handle->body[len - 2] = '\0';
+        logger_log(LOG_DEBUG, "Request body is '%s'", handle->body);
+    }
 
     const CURLcode res = curl_easy_perform(handle->curl);
     if (res == CURLE_OK)

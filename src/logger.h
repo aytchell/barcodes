@@ -15,6 +15,8 @@
 
 int logger_init(const struct config *config);
 
+int would_log(int prio);
+
 void logger_log(int prio, const char *format, ...);
 
 void logger_deinit();

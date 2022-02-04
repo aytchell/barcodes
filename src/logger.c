@@ -29,6 +29,11 @@ static const char* level_name(int prio)
     }
 }
 
+int would_log(int prio)
+{
+    return prio <= threshold;
+}
+
 void logger_log(int prio, const char *format, ...)
 {
     char message[MAX_LOG_MSG_LEN];
