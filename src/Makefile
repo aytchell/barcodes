@@ -18,6 +18,9 @@ all: key_event cfg_reader
 config.o: config.h config.c
 	gcc $(CFLAGS) -c config.c
 
+logger.o: logger.h logger.c config.h
+	gcc $(CFLAGS) -c logger.c
+
 input_buffer.o: input_buffer.h input_buffer.c
 	gcc $(CFLAGS) -c input_buffer.c
 
