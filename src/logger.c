@@ -1,12 +1,15 @@
-#include "logger.h"
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "logger.h"
+
 #define MAX_LOG_MSG_LEN     256
 
-int logger_init(
-        __attribute__((unused)) const struct config *config)
+static int threshold = LOG_INFO;
+
+int logger_init(const struct config *config)
 {
+    threshold = config->log_threshold;
     return TRUE;
 }
 
@@ -31,11 +34,14 @@ void logger_log(int prio, const char *format, ...)
     char message[MAX_LOG_MSG_LEN];
     va_list args;
 
+    if (prio > threshold)
+        return;
+
     va_start(args, format);
     vsnprintf(message, MAX_LOG_MSG_LEN, format, args);
     va_end(args);
 
-    if (prio >= LOG_WARNING)
+    if (prio <= LOG_WARNING)
     {
         fprintf(stderr, "%s - %s\n", level_name(prio), message);
     }

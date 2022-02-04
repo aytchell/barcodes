@@ -1,7 +1,6 @@
 #define _GNU_SOURCE 1
 
 #include <libevdev/libevdev.h>
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <poll.h>
@@ -15,6 +14,7 @@
 #include "input_device.h"
 #include "send_http.h"
 #include "config.h"
+#include "logger.h"
 
 // I didn't find named constants in the headers of libevdev or linux
 // so I defined my own based on experimentation
@@ -26,21 +26,21 @@ int drop_priviledges(const struct config *config)
 {
     if (getuid() != 0)
     {
-        fprintf(stdout, "Already running as non-root\n");
+        logger_log(LOG_INFO, "Already running as non-root");
         return TRUE;
     }
 
-    fprintf(stdout, "Dropping root-priviledges\n");
+    logger_log(LOG_INFO, "Dropping root-priviledges");
 
     // it's important to first change group id - then user id
     if (setgid(config->nonpriv_gid) != 0)
     {
-        fprintf(stderr, "Failed to change gid: %s\n", strerror(errno));
+        logger_log(LOG_ERR, "Failed to change gid: %s", strerror(errno));
         return FALSE;
     }
     if (setuid(config->nonpriv_uid) != 0)
     {
-        fprintf(stderr, "Failed to change uid: %s\n", strerror(errno));
+        logger_log(LOG_ERR, "Failed to change uid: %s", strerror(errno));
         return FALSE;
     }
 
@@ -95,7 +95,7 @@ void handle_key_released(struct input_event *ev,
             break;
 
         default:
-            printf("Ignoring: %s %s %d\n",
+            logger_log(LOG_DEBUG, "Ignoring: %s %s %d",
                     libevdev_event_type_get_name(ev->type),
                     libevdev_event_code_get_name(ev->type, ev->code),
                     ev->value);
@@ -132,16 +132,16 @@ int read_device_event(int revents, struct libevdev *dev,
     switch (revents & (POLLERR | POLLRDHUP))
     {
         case 0:
-            printf("fds[0].revents = %i\n", revents);
+            logger_log(LOG_INFO, "fds[0].revents = %i", revents);
             break;
         case POLLERR:
-            printf("Got 'POLLERR' from input device\n");
+            logger_log(LOG_INFO, "Got 'POLLERR' from input device");
             break;
         case POLLRDHUP:
-            printf("Got 'POLLRDHUP' from input device\n");
+            logger_log(LOG_INFO, "Got 'POLLRDHUP' from input device");
             break;
         case POLLERR | POLLRDHUP:
-            printf("Got 'POLLERR | POLLRDHUP' from input device\n");
+            logger_log(LOG_INFO, "Got 'POLLERR | POLLRDHUP' from input device");
             break;
     }
 
@@ -158,7 +158,7 @@ void poll_device(struct libevdev *dev, const struct config *config,
 
     if (!buffer_new(512, &buffer))
     {
-        fprintf(stderr, "Failed to allocate input buffer\n");
+        logger_log(LOG_CRIT, "Failed to allocate input buffer");
         return;
     }
 
@@ -178,7 +178,7 @@ void poll_device(struct libevdev *dev, const struct config *config,
         }
         else
         {
-            printf("poll returned %i\n", rc);
+            logger_log(LOG_ERR, "poll returned %i", rc);
             return;
         }
     }
@@ -194,12 +194,16 @@ int grab_scanner_and_scan(const struct config *config)
     const int rc = grab_input_device(&input);
     if (0 == rc)
     {
-        drop_priviledges(config);
+        if (!drop_priviledges(config))
+        {
+            close_input_device(&input);
+            return -1;
+        }
 
         struct http_handle *http = http_handle_new(config);
         if (http == NULL)
         {
-            fprintf(stderr, "Failed to create HTTP handle\n");
+            logger_log(LOG_CRIT, "Failed to create HTTP handle");
             close_input_device(&input);
             return -1;
         }
@@ -218,5 +222,11 @@ int main()
 
     read_config(&config);
 
-    return grab_scanner_and_scan(&config);
+    logger_init(&config);
+
+    int rc = grab_scanner_and_scan(&config);
+
+    logger_deinit();
+
+    return rc;
 }

@@ -1,9 +1,9 @@
 #include <curl/curl.h>
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "send_http.h"
+#include "logger.h"
 
 #define MAX_BODY_SIZE 512
 
@@ -13,6 +13,7 @@ struct http_handle
     struct curl_slist *headers;
     char json_name[MAX_PAYLOAD_NAME_LEN + 1];
     char body[MAX_BODY_SIZE];
+    char errorbuf[CURL_ERROR_SIZE];
 };
 
 static const char* const body_template = "{ \"%s\" : \"%s\" }\r\n";
@@ -34,7 +35,7 @@ struct http_handle* http_handle_new(const struct config *config)
 
     if (handle == NULL)
     {
-        fprintf(stderr, "Failed to allocate http_handle\n");
+        logger_log(LOG_ERR, "Failed to allocate http_handle");
         http_handle_delete(handle);
         return NULL;
     }
@@ -43,7 +44,7 @@ struct http_handle* http_handle_new(const struct config *config)
     handle->curl = curl_easy_init();
     if (handle->curl == NULL)
     {
-        fprintf(stderr, "Failed to init curl handle\n");
+        logger_log(LOG_ERR, "Failed to init curl handle");
         http_handle_delete(handle);
         return NULL;
     }
@@ -60,6 +61,10 @@ struct http_handle* http_handle_new(const struct config *config)
     curl_easy_setopt(handle->curl, CURLOPT_CUSTOMREQUEST,
             config->http_upload_verb);
     curl_easy_setopt(handle->curl, CURLOPT_WRITEFUNCTION, dev_null);
+    curl_easy_setopt(handle->curl, CURLOPT_ERRORBUFFER, handle->errorbuf);
+    logger_log(LOG_DEBUG, "Initialized curl handle");
+    logger_log(LOG_DEBUG, "Target url is '%s'", config->http_target_url);
+    logger_log(LOG_DEBUG, "Used HTTP verb is '%s'", config->http_upload_verb);
 
     // CURLOPT_POSTFIELDS and CURLOPT_POSTFIELDSIZE will be set when
     // we're doing the actual call (as the payload and its size is yet
@@ -83,6 +88,7 @@ void http_handle_delete(struct http_handle *handle)
             handle->curl = NULL;
         }
         free(handle);
+        logger_log(LOG_INFO, "Disposed curl handle");
     }
 }
 
@@ -101,5 +107,16 @@ void send_http_event(struct http_handle *handle,
     curl_easy_setopt(handle->curl, CURLOPT_POSTFIELDSIZE, size);
     curl_easy_setopt(handle->curl, CURLOPT_POSTFIELDS, handle->body);
 
-    curl_easy_perform(handle->curl);
+    logger_log(LOG_NOTICE, "Uploading barcode to REST endpoint");
+    logger_log(LOG_DEBUG, "Request body is '%s'", handle->body);
+
+    const CURLcode res = curl_easy_perform(handle->curl);
+    if (res == CURLE_OK)
+    {
+        logger_log(LOG_DEBUG, "Request successfully sent");
+    }
+    else
+    {
+        logger_log(LOG_WARNING, "An error occured: %s", handle->errorbuf);
+    }
 }

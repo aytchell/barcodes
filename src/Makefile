@@ -11,7 +11,7 @@ CFLAGS = $(BASIC_CFLAGS) $(LIBEV_CFLAGS) $(LIBCURL_CFLAGS)
 LDFLAGS = $(LIBEV_LDFLAGS) $(LIBCURL_LDFLAGS)
 
 KEY_EVENT_OBJECTS = key_event.o input_buffer.o input_device.o \
-					send_http.o config.o
+					send_http.o config.o logger.o
 
 all: key_event cfg_reader
 
@@ -24,13 +24,13 @@ logger.o: logger.h logger.c config.h
 input_buffer.o: input_buffer.h input_buffer.c
 	gcc $(CFLAGS) -c input_buffer.c
 
-input_device.o: input_device.h input_device.c
+input_device.o: input_device.h input_device.c logger.h
 	gcc $(CFLAGS) -c input_device.c
 
-send_http.o: send_http.h send_http.c input_buffer.h config.h
+send_http.o: send_http.h send_http.c input_buffer.h config.h logger.h
 	gcc $(CFLAGS) -c send_http.c
 
-key_event.o: key_event.c input_buffer.h input_device.h send_http.h config.h
+key_event.o: key_event.c input_buffer.h input_device.h send_http.h config.h logger.h
 	gcc $(CFLAGS) -c key_event.c
 
 key_event: $(KEY_EVENT_OBJECTS)
