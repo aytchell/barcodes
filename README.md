@@ -17,6 +17,26 @@ If these two are installed, there's a little Makefile so can can call `make`.
 The "build system" is intentionally kept simple to be easier portable to
 smaller platforms.
 
+## Installation
+
+Copy built executable to `/usr/local/bin/barcodes`
+Change owner to root: `chown root.root /usr/local/bin/barcodes`
+
+(the program will strip its root priviledges as soon as the correct input
+device is grabbed)
+
+Add this custom udev rule in `/etc/udev/rules.d/90-barcodes.rules`
+
+```
+SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="28e9", ATTRS{idProduct}=="03d9", RUN+="/usr/local/bin/barcodes"
+```
+
+Either reboot or call
+```
+# udevadm control --reload-rules && udevadm trigger
+```
+
+
 ## License
 
 SPDX: GPL-3.0-or-later

@@ -227,6 +227,7 @@ int main()
 
     int rc = grab_scanner_and_scan(&config);
 
+    logger_log(LOG_NOTICE, "Exiting");
     logger_deinit();
 
     return rc;

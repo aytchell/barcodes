@@ -22,11 +22,11 @@ static void print_device_info(struct input_device *dev)
     logger_log(LOG_DEBUG, "Input device name '%s'", libevdev_get_name(evdev));
     logger_log(LOG_DEBUG, "Physical location '%s'", libevdev_get_phys(evdev));
     logger_log(LOG_DEBUG, "Unique identifier '%s'", libevdev_get_uniq(evdev));
-    logger_log(LOG_DEBUG, "Product ID '%i'", libevdev_get_id_product(evdev));
-    logger_log(LOG_DEBUG, "Vendor ID '%i'", libevdev_get_id_vendor(evdev));
-    logger_log(LOG_DEBUG, "Bustype ID '%i'", libevdev_get_id_bustype(evdev));
-    logger_log(LOG_DEBUG, "Version ID '%i'", libevdev_get_id_version(evdev));
-    logger_log(LOG_DEBUG, "Driver version '%i'", libevdev_get_driver_version(evdev));
+    logger_log(LOG_DEBUG, "Product ID 0x%x", libevdev_get_id_product(evdev));
+    logger_log(LOG_DEBUG, "Vendor ID 0x%x", libevdev_get_id_vendor(evdev));
+    logger_log(LOG_DEBUG, "Bustype ID %i", libevdev_get_id_bustype(evdev));
+    logger_log(LOG_DEBUG, "Version ID %i", libevdev_get_id_version(evdev));
+    logger_log(LOG_DEBUG, "Driver version %i", libevdev_get_driver_version(evdev));
 }
 
 static int check_input_file(struct input_device *dev)
@@ -92,7 +92,7 @@ static int iterate_dir(DIR *dir, struct input_device *dev)
         }
     }
 
-    logger_log(LOG_NOTICE, "No barcode scanner found");
+    logger_log(LOG_NOTICE, "Barcode scanner not found");
     return 1;
 }
 
