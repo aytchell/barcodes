@@ -1,4 +1,5 @@
 .*.swp
 .*.swo
 key_event
+cfg_reader
 *.o

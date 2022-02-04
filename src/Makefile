@@ -13,7 +13,7 @@ LDFLAGS = $(LIBEV_LDFLAGS) $(LIBCURL_LDFLAGS)
 KEY_EVENT_OBJECTS = key_event.o input_buffer.o input_device.o \
 					send_http.o config.o
 
-all: key_event
+all: key_event cfg_reader
 
 config.o: config.h config.c
 	gcc $(CFLAGS) -c config.c
@@ -33,7 +33,9 @@ key_event.o: key_event.c input_buffer.h input_device.h send_http.h config.h
 key_event: $(KEY_EVENT_OBJECTS)
 	gcc $(KEY_EVENT_OBJECTS) -o key_event $(LDFLAGS)
 
+cfg_reader: cfg_reader.c config.o
+	gcc $(BASIC_CFLAGS) cfg_reader.c -o cfg_reader config.o
 
 .PHONY: clean
 clean:
-	rm -f *.o list key_event
+	rm -f *.o list key_event cfg_reader
