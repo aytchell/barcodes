@@ -53,7 +53,7 @@ char* find_last_not_of(char *line, char *patterns)
     return last;
 }
 
-int parse_int(const char *value)
+int parse_uint16(const char *value)
 {
     char *endptr = NULL;
     int base = 10;

@@ -10,7 +10,7 @@ char* find_last_not_of(char *line, char *patterns);
 
 const char *trim(char* string);
 
-int parse_int(const char *value);
+int parse_uint16(const char *value);
 
 
 #endif // STRING_UTILS_H

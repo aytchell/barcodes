@@ -11,14 +11,17 @@ CFLAGS = $(BASIC_CFLAGS) $(LIBEV_CFLAGS) $(LIBCURL_CFLAGS)
 LDFLAGS = $(LIBEV_LDFLAGS) $(LIBCURL_LDFLAGS)
 
 KEY_EVENT_OBJECTS = key_event.o input_buffer.o input_device.o \
-					send_http.o config.o logger.o string_utils.o
+					send_http.o config.o logger.o string_utils.o \
+					cfg_logger.o
+
+CFG_READER_OBJS = config.o string_utils.o cfg_logger.o logger.o
 
 all: key_event cfg_reader
 
 string_utils.o: string_utils.h string_utils.c
 	gcc $(CFLAGS) -c string_utils.c
 
-config.o: config.h config.c string_utils.h
+config.o: config.h config.c string_utils.h cfg_logger.h
 	gcc $(CFLAGS) -c config.c
 
 logger.o: logger.h logger.c config.h
@@ -40,7 +43,7 @@ key_event: $(KEY_EVENT_OBJECTS)
 	gcc $(KEY_EVENT_OBJECTS) -o key_event $(LDFLAGS)
 
 cfg_reader: cfg_reader.c config.o string_utils.o
-	gcc $(BASIC_CFLAGS) cfg_reader.c -o cfg_reader config.o string_utils.o
+	gcc $(BASIC_CFLAGS) cfg_reader.c -o cfg_reader $(CFG_READER_OBJS)
 
 .PHONY: clean
 clean:

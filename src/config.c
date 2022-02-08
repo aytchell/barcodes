@@ -17,6 +17,14 @@
 
 #define MAX_CONFIG_LINE_LEN 768
 
+struct context
+{
+    const char *filename;
+    int line_nr;
+    struct config_logger *logger;
+    struct config *config;
+};
+
 void set_defaults(struct config *config)
 {
     config->scanner_vendor_id = SCANNER_VENDOR_ID;
@@ -32,44 +40,86 @@ void set_defaults(struct config *config)
     strncpy(config->http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
 }
 
-static int process_vendor_id(const char *value, struct config *config)
+static int process_vendor_id(const char *value, struct context *context)
 {
-    const int int_val = parse_int(value);
+    const int int_val = parse_uint16(value);
     if (int_val == -1)
+    {
+        cfg_logger_log(context->logger, LOG_ERR,
+                "Invalid entry (%s) for 'vendor_id' in %s:%i",
+                value, context->filename, context->line_nr);
         return FALSE;
+    }
+
+    cfg_logger_log(context->logger, LOG_DEBUG,
+            "Found %i for 'vendor_id' in %s:%i",
+            int_val, context->filename, context->line_nr);
+    struct config *config = context->config;
     config->scanner_vendor_id = int_val;
     return TRUE;
 }
 
-static int process_product_id(const char *value, struct config *config)
+static int process_product_id(const char *value, struct context *context)
 {
-    const int int_val = parse_int(value);
+    const int int_val = parse_uint16(value);
     if (int_val == -1)
+    {
+        cfg_logger_log(context->logger, LOG_ERR,
+                "Invalid entry (%s) for 'product_id' in %s:%i",
+                value, context->filename, context->line_nr);
         return FALSE;
+    }
+
+    cfg_logger_log(context->logger, LOG_DEBUG,
+            "Found %i for 'product_id' in %s:%i",
+            int_val, context->filename, context->line_nr);
+    struct config *config = context->config;
     config->scanner_product_id = int_val;
     return TRUE;
 }
 
-static int process_uid(const char *value, struct config *config)
+static int process_uid(const char *value, struct context *context)
 {
-    const int int_val = parse_int(value);
+    const int int_val = parse_uint16(value);
     if (int_val == -1)
+    {
+        cfg_logger_log(context->logger, LOG_ERR,
+                "Invalid entry (%s) for 'uid' in %s:%i",
+                value, context->filename, context->line_nr);
         return FALSE;
+    }
+
+    cfg_logger_log(context->logger, LOG_DEBUG,
+            "Found %i for 'uid' in %s:%i",
+            int_val, context->filename, context->line_nr);
+    struct config *config = context->config;
     config->nonpriv_uid = int_val;
     return TRUE;
 }
 
-static int process_gid(const char *value, struct config *config)
+static int process_gid(const char *value, struct context *context)
 {
-    const int int_val = parse_int(value);
+    const int int_val = parse_uint16(value);
     if (int_val == -1)
+    {
+        cfg_logger_log(context->logger, LOG_ERR,
+                "Invalid entry (%s) for 'gid' in %s:%i",
+                value, context->filename, context->line_nr);
         return FALSE;
+    }
+
+    cfg_logger_log(context->logger, LOG_DEBUG,
+            "Found %i for 'gid' in %s:%i",
+            int_val, context->filename, context->line_nr);
+    struct config *config = context->config;
     config->nonpriv_gid = int_val;
     return TRUE;
 }
 
-static int process_log_threshold(const char *value, struct config *config)
+static int process_log_threshold(const char *value, struct context *context)
 {
+    struct config *config = context->config;
+
     if (0 == strcasecmp("CRITICAL", value))
     {
         config->log_threshold = LOG_CRIT;
@@ -109,8 +159,9 @@ static int process_log_threshold(const char *value, struct config *config)
     return FALSE;
 }
 
-static int process_use_syslog(const char *value, struct config *config)
+static int process_use_syslog(const char *value, struct context *context)
 {
+    struct config *config = context->config;
     if (
             (0 == strcasecmp("TRUE", value)) ||
             (0 == strcasecmp("YES", value)))
@@ -130,13 +181,14 @@ static int process_use_syslog(const char *value, struct config *config)
     return FALSE;
 }
 
-static int process_http_upload_verb(const char *value, struct config *config)
+static int process_http_upload_verb(const char *value, struct context *context)
 {
     if (
             (0 == strcmp("PUT", value)) ||
             (0 == strcmp("POST", value)) ||
             (0 == strcmp("PATCH", value)))
     {
+        struct config *config = context->config;
         strncpy(config->http_upload_verb, value, MAX_UPLOAD_VERB_LEN);
         return TRUE;
     }
@@ -144,66 +196,75 @@ static int process_http_upload_verb(const char *value, struct config *config)
     return FALSE;
 }
 
-static int process_http_target_url(const char *value, struct config *config)
+static int process_http_target_url(const char *value, struct context *context)
 {
+    struct config *config = context->config;
     strncpy(config->http_target_url, value, MAX_TARGET_URL_LEN);
     return TRUE;
 }
 
-static int process_http_content_type(const char *value, struct config *config)
+static int process_http_content_type(const char *value, struct context *context)
 {
+    struct config *config = context->config;
     strncpy(config->http_content_type, value, MAX_CONTENT_TYPE_LEN);
     return TRUE;
 }
 
-static int process_http_json_payload_name(const char *value, struct config *config)
+static int process_http_json_payload_name(const char *value,
+        struct context *context)
 {
+    struct config *config = context->config;
     strncpy(config->http_json_payload_name, value, MAX_PAYLOAD_NAME_LEN);
     return TRUE;
 }
 
-static int process_param(
-        const char* key, const char *value, struct config *config)
+static int process_param(const char* key, const char *value,
+        struct context *context)
 {
     if (0 == strcmp("vendor_id", key))
-        return process_vendor_id(value, config);
+        return process_vendor_id(value, context);
 
     if (0 == strcmp("product_id", key))
-        return process_product_id(value, config);
+        return process_product_id(value, context);
 
     if (0 == strcmp("uid", key))
-        return process_uid(value, config);
+        return process_uid(value, context);
 
     if (0 == strcmp("gid", key))
-        return process_gid(value, config);
+        return process_gid(value, context);
 
     if (0 == strcmp("log_threshold", key))
-        return process_log_threshold(value, config);
+        return process_log_threshold(value, context);
 
     if (0 == strcmp("use_syslog", key))
-        return process_use_syslog(value, config);
+        return process_use_syslog(value, context);
 
     if (0 == strcmp("http_upload_verb", key))
-        return process_http_upload_verb(value, config);
+        return process_http_upload_verb(value, context);
 
     if (0 == strcmp("http_target_url", key))
-        return process_http_target_url(value, config);
+        return process_http_target_url(value, context);
 
     if (0 == strcmp("http_content_type", key))
-        return process_http_content_type(value, config);
+        return process_http_content_type(value, context);
 
     if (0 == strcmp("http_json_payload_name", key))
-        return process_http_json_payload_name(value, config);
+        return process_http_json_payload_name(value, context);
 
+    cfg_logger_log(context->logger, LOG_ERR,
+            "Encountered unknown keyword '%s' in %s:%i", key,
+            context->filename, context->line_nr);
     return FALSE;
 }
 
-static int parse_param_line(char* line, struct config *config)
+static int parse_param_line(char* line, struct context *context)
 {
     char* equal = strchr(line, '=');
     if (equal == NULL)
     {
-        // line doesn't contain a '=' but we expect "key = value"
+        cfg_logger_log(context->logger, LOG_ERR,
+                "No '=' found in config file %s:%i",
+                context->filename, context->line_nr);
         return FALSE;
     }
 
@@ -211,10 +272,10 @@ static int parse_param_line(char* line, struct config *config)
     const char *key = trim(line);
     const char *value = trim(++equal);
 
-    return process_param(key, value, config);
+    return process_param(key, value, context);
 }
 
-static int parse_raw_line(char* line, struct config *config)
+static int parse_raw_line(char* line, struct context *context)
 {
     char *comment = strchr(line, '#');
     if (comment != NULL)
@@ -230,27 +291,48 @@ static int parse_raw_line(char* line, struct config *config)
         return TRUE;
     }
 
-    return parse_param_line(line, config);
+    return parse_param_line(line, context);
 }
 
-int read_config(struct config *config, const char *filename)
+int read_config_file(FILE *file, struct context *context)
 {
-    FILE* file = fopen(filename, "r");
     char buffer[MAX_CONFIG_LINE_LEN];
     char* line;
+    int result = TRUE;
 
-    if (file == NULL)
-    {
-        return FALSE;
-    }
+    context->line_nr = 0;
 
     while ((line = fgets(buffer, MAX_CONFIG_LINE_LEN, file)) != NULL)
     {
-        if (!parse_raw_line(line, config))
+        ++context->line_nr;
+        if (!parse_raw_line(line, context))
         {
-            return FALSE;
+            result = FALSE;
         }
     }
 
-    return TRUE;
+    return result;
+}
+
+int read_config(struct config *config, const char *filename,
+        struct config_logger *logger)
+{
+    FILE* file = fopen(filename, "r");
+
+    if (file == NULL)
+    {
+        cfg_logger_log(logger, LOG_INFO, "Failed to open %s\n", filename);
+        return TRUE;
+    }
+
+    struct context context;
+    context.filename = filename;
+    context.line_nr = 0;
+    context.logger = logger;
+    context.config = config;
+
+    const int rc = read_config_file(file, &context);
+    fclose(file);
+
+    return rc;
 }

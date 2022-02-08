@@ -217,14 +217,26 @@ int grab_scanner_and_scan(const struct config *config)
     return rc;
 }
 
+int init_config_and_logger(struct config *config)
+{
+    struct config_logger *cfg_logger = cfg_logger_new();
+
+    set_defaults(config);
+    const int rc = read_config(config, "/etc/barcodes.conf", cfg_logger);
+
+    logger_init(config);
+    cfg_logger_flush(cfg_logger);
+    cfg_logger_delete(cfg_logger);
+
+    return rc;
+}
+
 int main()
 {
     struct config config;
 
-    set_defaults(&config);
-    read_config(&config, "/etc/barcodes.conf");
-
-    logger_init(&config);
+    if (!init_config_and_logger(&config))
+        return 1;
 
     int rc = grab_scanner_and_scan(&config);
 

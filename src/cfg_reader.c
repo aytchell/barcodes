@@ -1,12 +1,27 @@
 #include <stdio.h>
 #include "config.h"
+#include "logger.h"
+
+int init_config_and_logger(struct config *config)
+{
+    struct config_logger *cfg_logger = cfg_logger_new();
+
+    set_defaults(config);
+    const int rc = read_config(config, "barcodes.conf", cfg_logger);
+
+    logger_init(config);
+    cfg_logger_flush(cfg_logger);
+    cfg_logger_delete(cfg_logger);
+
+    return rc;
+}
 
 int main()
 {
     struct config config;
     set_defaults(&config);
 
-    if (!read_config(&config, "barcodes.conf"))
+    if (!init_config_and_logger(&config))
     {
         fprintf(stderr, "Failed to read config\n");
         return 1;

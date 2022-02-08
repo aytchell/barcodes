@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include "cfg_logger.h"
 
 #define TRUE (1 == 1)
 #define FALSE (!(TRUE))
@@ -27,7 +28,8 @@ struct config
 
 void set_defaults(struct config *config);
 
-int read_config(struct config *config, const char* filename);
+int read_config(struct config *config, const char* filename,
+        struct config_logger *logger);
 
 
 #endif // CONFIG_H
