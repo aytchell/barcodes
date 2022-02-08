@@ -10,9 +10,10 @@ This is a tiny program with the following task:
 
 You need to install the development versions of
  * [libevdev](https://www.freedesktop.org/software/libevdev/doc/latest/index.html)
- * [libcurl](https://curl.se/libcurl/)
+    -- required for reading input devices like keyboards or barcode scanners
+ * [libcurl](https://curl.se/libcurl/) -- required for sending data to a REST API
 
-If these two are installed, there's a little Makefile so can can call `make`.
+If these two are installed, there's a small Makefile so one can call `make`.
 
 The "build system" is intentionally kept simple to be easier portable to
 smaller platforms.

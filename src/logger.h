@@ -3,8 +3,6 @@
 
 #include "config.h"
 
-#define LOG_EMERG   0   /* system is unusable */
-#define LOG_ALERT   1   /* action must be taken immediately */
 #define LOG_CRIT    2   /* critical conditions */
 #define LOG_ERR     3   /* error conditions */
 #define LOG_WARNING 4   /* warning conditions */

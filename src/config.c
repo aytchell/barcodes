@@ -1,6 +1,7 @@
 #include "config.h"
 #include "logger.h"
 #include <string.h>
+#include <stdio.h>
 
 #define SCANNER_VENDOR_ID   0x28e9
 #define SCANNER_PRODUCT_ID  0x03d9
@@ -12,7 +13,9 @@
 #define JAMBEL_EVENT_URL    "http://localhost:8080/event-input/558a4918-54a7-492c-b268-3790f4d5f0f5"
 #define HTTP_CONTENT_TYPE   "application/vnd.com.github.aytchell.eventvalue-v1+json"
 
-static void set_defaults(struct config *config)
+#define MAX_CONFIG_LINE_LEN 768
+
+void set_defaults(struct config *config)
 {
     config->scanner_vendor_id = SCANNER_VENDOR_ID;
     config->scanner_product_id = SCANNER_PRODUCT_ID;
@@ -27,16 +30,76 @@ static void set_defaults(struct config *config)
     strncpy(config->http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
 }
 
-static int read_file(
-        __attribute__((unused)) struct config *config,
-        __attribute__((unused)) const char *filename)
+static int matches_any_of(char current, char* patterns)
 {
-    // to be implemented
+    char *p = patterns;
+    while (*p != '\0')
+    {
+        if (*p == current)
+        {
+            return TRUE;
+        }
+        ++p;
+    }
+
+    return FALSE;
+}
+
+static char* find_first_not_of(char *line, char *patterns)
+{
+    while (*line != '\0')
+    {
+        char c = line[0];
+        if (!matches_any_of(c, patterns))
+        {
+            return line;
+        }
+        ++line;
+    }
+
+    return line;
+}
+
+static int parse_line(char* line,
+        __attribute__((unused)) struct config *config)
+{
+    char *comment = strchr(line, '#');
+    if (comment != NULL)
+    {
+        // Strip everything beyond a '#' character (i.e. ignore comments)
+        *comment = '\0';
+    }
+
+    line = find_first_not_of(line, " \t\r\n");
+    if (*line == '\0')
+    {
+        // empty line (or only spaces or comments)
+        return TRUE;
+    }
+
+    printf("Found line: '%s'\n", line);
+
     return TRUE;
 }
 
-int read_config(struct config *config)
+int read_config(struct config *config, const char *filename)
 {
-    set_defaults(config);
-    return read_file(config, "/etc/barcodes.config");
+    FILE* file = fopen(filename, "r");
+    char buffer[MAX_CONFIG_LINE_LEN];
+    char* line;
+
+    if (file == NULL)
+    {
+        return FALSE;
+    }
+
+    while ((line = fgets(buffer, MAX_CONFIG_LINE_LEN, file)) != NULL)
+    {
+        if (!parse_line(line, config))
+        {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }

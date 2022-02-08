@@ -221,7 +221,8 @@ int main()
 {
     struct config config;
 
-    read_config(&config);
+    set_defaults(&config);
+    read_config(&config, "/etc/barcodes.conf");
 
     logger_init(&config);
 

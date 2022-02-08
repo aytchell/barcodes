@@ -4,8 +4,9 @@
 int main()
 {
     struct config config;
+    set_defaults(&config);
 
-    if (!read_config(&config))
+    if (!read_config(&config, "barcodes.conf"))
     {
         fprintf(stderr, "Failed to read config\n");
         return 1;
