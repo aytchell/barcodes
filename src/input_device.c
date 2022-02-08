@@ -108,7 +108,7 @@ void init_device_struct(struct input_device *dev,
 int open_input_device(struct input_device *dev)
 {
     logger_log(LOG_DEBUG, "Scanning '%s' for barcode scanner", input_dir);
-    logger_log(LOG_DEBUG, "Expected: vendor(0x%x), product(0x%x)",
+    logger_log(LOG_INFO, "Expectation: vendor(0x%x), product(0x%x)",
             dev->vendor_id, dev->product_id);
 
     DIR *dir = opendir(input_dir);
