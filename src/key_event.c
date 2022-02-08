@@ -222,7 +222,10 @@ int init_config_and_logger(struct config *config)
     struct config_logger *cfg_logger = cfg_logger_new();
 
     set_defaults(config);
-    const int rc = read_config(config, "/etc/barcodes.conf", cfg_logger);
+    int rc = TRUE;
+    rc = read_config(config, "/etc/barcodes.conf", cfg_logger);
+    rc = read_config(config, "~/.barcodes.conf", cfg_logger) && rc;
+    rc = read_config(config, "barcodes.conf", cfg_logger) && rc;
 
     logger_init(config);
     cfg_logger_flush(cfg_logger);
