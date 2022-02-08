@@ -54,6 +54,8 @@ void cfg_logger_delete(struct config_logger *logger)
         free(entry);
         entry = next;
     }
+
+    free(logger);
 }
 
 void cfg_logger_log(struct config_logger *logger, int level,
