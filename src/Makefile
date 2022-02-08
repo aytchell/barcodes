@@ -1,3 +1,30 @@
+# output binary
+BIN := barcodes
+
+# source files
+SRCS := barcodes.c input_buffer.c input_device.c \
+	send_http.c config.c string_utils.c \
+	cfg_logger.c logger.c 
+
+# intermediate directory for generated object files
+OBJDIR := .objs
+# intermediate directory for generated dependency files
+DEPDIR := .deps
+
+# object files, auto generated from source files
+OBJS := $(patsubst %,$(OBJDIR)/%.o,$(basename $(SRCS)))
+# dependency files, auto generated from source files
+DEPS := $(patsubst %,$(DEPDIR)/%.d,$(basename $(SRCS)))
+
+# compilers (at least gcc and clang) don't create the subdirectories automatically
+$(shell mkdir -p $(dir $(OBJS)) >/dev/null)
+$(shell mkdir -p $(dir $(DEPS)) >/dev/null)
+
+# C compiler
+CC := gcc
+# linker
+LD := gcc
+
 BASIC_CFLAGS = -Wall -pedantic -Wextra
 
 LIBEV_CFLAGS = `pkg-config --cflags libevdev`
@@ -6,45 +33,37 @@ LIBEV_LDFLAGS = `pkg-config --libs libevdev`
 LIBCURL_CFLAGS = `pkg-config --cflags libcurl`
 LIBCURL_LDFLAGS = `pkg-config --libs libcurl`
 
-CFLAGS = $(BASIC_CFLAGS) $(LIBEV_CFLAGS) $(LIBCURL_CFLAGS)
+# C flags
+CFLAGS := $(BASIC_CFLAGS) $(LIBEV_CFLAGS) $(LIBCURL_CFLAGS)
+# linker flags
+LDFLAGS := 
+# linker flags: libraries to link (e.g. -lfoo)
+LDLIBS := $(LIBEV_LDFLAGS) $(LIBCURL_LDFLAGS)
+# flags required for dependency generation; passed to compilers
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
 
-LDFLAGS = $(LIBEV_LDFLAGS) $(LIBCURL_LDFLAGS)
+# postcompile step
+POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 
-KEY_EVENT_OBJECTS = key_event.o input_buffer.o input_device.o \
-					send_http.o config.o logger.o string_utils.o \
-					cfg_logger.o
-
-CFG_READER_OBJS = config.o string_utils.o cfg_logger.o logger.o
-
-all: key_event cfg_reader
-
-string_utils.o: string_utils.h string_utils.c
-	gcc $(CFLAGS) -c string_utils.c
-
-config.o: config.h config.c string_utils.h cfg_logger.h
-	gcc $(CFLAGS) -c config.c
-
-logger.o: logger.h logger.c config.h
-	gcc $(CFLAGS) -c logger.c
-
-input_buffer.o: input_buffer.h input_buffer.c
-	gcc $(CFLAGS) -c input_buffer.c
-
-input_device.o: input_device.h input_device.c logger.h
-	gcc $(CFLAGS) -c input_device.c
-
-send_http.o: send_http.h send_http.c input_buffer.h config.h logger.h
-	gcc $(CFLAGS) -c send_http.c
-
-key_event.o: key_event.c input_buffer.h input_device.h send_http.h config.h logger.h
-	gcc $(CFLAGS) -c key_event.c
-
-key_event: $(KEY_EVENT_OBJECTS)
-	gcc $(KEY_EVENT_OBJECTS) -o key_event $(LDFLAGS)
-
-cfg_reader: cfg_reader.c config.o string_utils.o
-	gcc $(BASIC_CFLAGS) cfg_reader.c -o cfg_reader $(CFG_READER_OBJS)
+all: $(BIN)
 
 .PHONY: clean
 clean:
-	rm -f *.o list key_event cfg_reader
+	rm -rf $(OBJDIR) $(DEPDIR)
+
+.PHONY: distclean
+distclean: clean
+	rm -f $(BIN)
+
+$(BIN): $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+$(OBJDIR)/%.o: %.c $(DEPDIR)/%.d
+	$(CC) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+	$(POSTCOMPILE)
+
+.PRECIOUS: $(DEPDIR)/%.d
+$(DEPDIR)/%.d: ;
+
+-include $(DEPS)
+
