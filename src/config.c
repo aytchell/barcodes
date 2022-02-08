@@ -40,80 +40,47 @@ void set_defaults(struct config *config)
     strncpy(config->http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
 }
 
-static int process_vendor_id(const char *value, struct context *context)
+static int process_int_entry(const char *value, struct context *context,
+        const char *name, int *storage)
 {
     const int int_val = parse_uint16(value);
     if (int_val == -1)
     {
         cfg_logger_log(context->logger, LOG_ERR,
-                "Invalid entry (%s) for 'vendor_id' in %s:%i",
-                value, context->filename, context->line_nr);
+                "Invalid entry (%s) for '%s' in %s:%i",
+                value, name, context->filename, context->line_nr);
         return FALSE;
     }
 
     cfg_logger_log(context->logger, LOG_DEBUG,
-            "Found %i for 'vendor_id' in %s:%i",
-            int_val, context->filename, context->line_nr);
-    struct config *config = context->config;
-    config->scanner_vendor_id = int_val;
+            "Found %i for '%s' in %s:%i",
+            int_val, name, context->filename, context->line_nr);
+    *storage = int_val;
     return TRUE;
+}
+
+static int process_vendor_id(const char *value, struct context *context)
+{
+    return process_int_entry(value, context, "vendor_id",
+            &(context->config->scanner_vendor_id));
 }
 
 static int process_product_id(const char *value, struct context *context)
 {
-    const int int_val = parse_uint16(value);
-    if (int_val == -1)
-    {
-        cfg_logger_log(context->logger, LOG_ERR,
-                "Invalid entry (%s) for 'product_id' in %s:%i",
-                value, context->filename, context->line_nr);
-        return FALSE;
-    }
-
-    cfg_logger_log(context->logger, LOG_DEBUG,
-            "Found %i for 'product_id' in %s:%i",
-            int_val, context->filename, context->line_nr);
-    struct config *config = context->config;
-    config->scanner_product_id = int_val;
-    return TRUE;
+    return process_int_entry(value, context, "product_id",
+            &(context->config->scanner_product_id));
 }
 
 static int process_uid(const char *value, struct context *context)
 {
-    const int int_val = parse_uint16(value);
-    if (int_val == -1)
-    {
-        cfg_logger_log(context->logger, LOG_ERR,
-                "Invalid entry (%s) for 'uid' in %s:%i",
-                value, context->filename, context->line_nr);
-        return FALSE;
-    }
-
-    cfg_logger_log(context->logger, LOG_DEBUG,
-            "Found %i for 'uid' in %s:%i",
-            int_val, context->filename, context->line_nr);
-    struct config *config = context->config;
-    config->nonpriv_uid = int_val;
-    return TRUE;
+    return process_int_entry(value, context, "uid",
+            &(context->config->nonpriv_uid));
 }
 
 static int process_gid(const char *value, struct context *context)
 {
-    const int int_val = parse_uint16(value);
-    if (int_val == -1)
-    {
-        cfg_logger_log(context->logger, LOG_ERR,
-                "Invalid entry (%s) for 'gid' in %s:%i",
-                value, context->filename, context->line_nr);
-        return FALSE;
-    }
-
-    cfg_logger_log(context->logger, LOG_DEBUG,
-            "Found %i for 'gid' in %s:%i",
-            int_val, context->filename, context->line_nr);
-    struct config *config = context->config;
-    config->nonpriv_gid = int_val;
-    return TRUE;
+    return process_int_entry(value, context, "gid",
+            &(context->config->nonpriv_gid));
 }
 
 static int parse_log_level(const char *value)
@@ -331,7 +298,7 @@ int read_config(struct config *config, const char *filename,
 
     if (file == NULL)
     {
-        cfg_logger_log(logger, LOG_INFO, "Failed to open %s\n", filename);
+        cfg_logger_log(logger, LOG_INFO, "Failed to open %s", filename);
         return TRUE;
     }
 
