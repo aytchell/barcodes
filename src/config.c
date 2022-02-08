@@ -60,8 +60,56 @@ static char* find_first_not_of(char *line, char *patterns)
     return line;
 }
 
-static int parse_line(char* line,
+static char* find_last_not_of(char *line, char *patterns)
+{
+    char *last = line;
+    char *pos = line;
+
+    while (*pos != '\0')
+    {
+        if (!matches_any_of(*pos, patterns))
+        {
+            last = pos;
+        }
+        ++pos;
+    }
+
+    return last;
+}
+
+static int process_param(const char* key, const char *value,
         __attribute__((unused)) struct config *config)
+{
+    fprintf(stdout, "Key: '%s' - Value: '%s'\n", key, value);
+    return TRUE;
+}
+
+const char *trim(char* string)
+{
+    string = find_first_not_of(string, " \"\t\r\n");
+    char* last = find_last_not_of(string, " \"\t\r\n");
+    if (*last != '\0')
+        *(++last) = '\0';
+    return string;
+}
+
+static int parse_param_line(char* line, struct config *config)
+{
+    char* equal = strchr(line, '=');
+    if (equal == NULL)
+    {
+        // line doesn't contain a '=' but we expect "key = value"
+        return FALSE;
+    }
+
+    *equal = '\0';
+    const char *key = trim(line);
+    const char *value = trim(++equal);
+
+    return process_param(key, value, config);
+}
+
+static int parse_raw_line(char* line, struct config *config)
 {
     char *comment = strchr(line, '#');
     if (comment != NULL)
@@ -77,9 +125,7 @@ static int parse_line(char* line,
         return TRUE;
     }
 
-    printf("Found line: '%s'\n", line);
-
-    return TRUE;
+    return parse_param_line(line, config);
 }
 
 int read_config(struct config *config, const char *filename)
@@ -95,7 +141,7 @@ int read_config(struct config *config, const char *filename)
 
     while ((line = fgets(buffer, MAX_CONFIG_LINE_LEN, file)) != NULL)
     {
-        if (!parse_line(line, config))
+        if (!parse_raw_line(line, config))
         {
             return FALSE;
         }
