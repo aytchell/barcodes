@@ -1,9 +1,9 @@
+#include <stdio.h>
+#include <string.h>
+
 #include "config.h"
 #include "logger.h"
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
+#include "string_utils.h"
 
 #define SCANNER_VENDOR_ID   -1
 #define SCANNER_PRODUCT_ID  -1
@@ -30,69 +30,6 @@ void set_defaults(struct config *config)
     strncpy(config->http_target_url, JAMBEL_EVENT_URL, MAX_TARGET_URL_LEN);
     strncpy(config->http_content_type, HTTP_CONTENT_TYPE, MAX_CONTENT_TYPE_LEN);
     strncpy(config->http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
-}
-
-static int matches_any_of(char current, char* patterns)
-{
-    char *p = patterns;
-    while (*p != '\0')
-    {
-        if (*p == current)
-        {
-            return TRUE;
-        }
-        ++p;
-    }
-
-    return FALSE;
-}
-
-static char* find_first_not_of(char *line, char *patterns)
-{
-    while (*line != '\0')
-    {
-        char c = line[0];
-        if (!matches_any_of(c, patterns))
-        {
-            return line;
-        }
-        ++line;
-    }
-
-    return line;
-}
-
-static char* find_last_not_of(char *line, char *patterns)
-{
-    char *last = line;
-    char *pos = line;
-
-    while (*pos != '\0')
-    {
-        if (!matches_any_of(*pos, patterns))
-        {
-            last = pos;
-        }
-        ++pos;
-    }
-
-    return last;
-}
-
-static int parse_int(const char *value)
-{
-    char *endptr = NULL;
-    int base = 10;
-    if (value[0] == '0' && (value[1] == 'x' || value[1] == 'X'))
-    {
-        base = 16;
-    }
-
-    long val = strtol(value, &endptr, base);
-    if (*endptr != '\0') return FALSE;
-    if (val > SHRT_MAX) return FALSE;
-    if (val < 0) return FALSE;
-    return val;
 }
 
 static int process_vendor_id(const char *value, struct config *config)
@@ -259,15 +196,6 @@ static int process_param(
         return process_http_json_payload_name(value, config);
 
     return FALSE;
-}
-
-const char *trim(char* string)
-{
-    string = find_first_not_of(string, " \"\t\r\n");
-    char* last = find_last_not_of(string, " \"\t\r\n");
-    if (*last != '\0')
-        *(++last) = '\0';
-    return string;
 }
 
 static int parse_param_line(char* line, struct config *config)
