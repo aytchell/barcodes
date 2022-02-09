@@ -49,19 +49,6 @@ int grab_scanner_and_scan(const struct config *config)
             return -1;
         }
 
-        if (config->daemonize)
-        {
-            // daemonize the process.
-            // Change cwd to '/' and redirect stdin / stdout / stderr
-            if (0 != daemon(0, 0))
-            {
-                logger_log(LOG_ERR, "Failed to daemonize process: %s",
-                        strerror(errno));
-                return -1;
-            }
-            logger_log(LOG_NOTICE, "Now running as daemon in the background");
-        }
-
         struct http_handle *http = http_handle_new(config);
         if (http == NULL)
         {
@@ -101,6 +88,19 @@ int main()
 
     if (!init_config_and_logger(&config))
         return 1;
+
+    if (config.daemonize)
+    {
+        // daemonize the process.
+        // Change cwd to '/' and redirect stdin / stdout / stderr
+        if (0 != daemon(0, 0))
+        {
+            logger_log(LOG_ERR, "Failed to daemonize process: %s",
+                    strerror(errno));
+            return -1;
+        }
+        logger_log(LOG_NOTICE, "Now running as daemon in the background");
+    }
 
     int rc = grab_scanner_and_scan(&config);
 
