@@ -59,6 +59,7 @@ int grab_scanner_and_scan(const struct config *config)
                         strerror(errno));
                 return -1;
             }
+            logger_log(LOG_NOTICE, "Now running as daemon in the background");
         }
 
         struct http_handle *http = http_handle_new(config);
