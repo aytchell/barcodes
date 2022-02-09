@@ -133,7 +133,7 @@ int grab_input_device(struct input_device *dev)
         rc = libevdev_grab(dev->evdev, LIBEVDEV_GRAB);
         if (rc != 0)
         {
-            logger_log(LOG_ERR, "Failed to grab device");
+            logger_log(LOG_ERR, "Failed to grab device: %s", strerror(errno));
             close_input_device(dev);
             return rc;
         }
