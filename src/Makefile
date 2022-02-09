@@ -4,7 +4,7 @@ BIN := barcodes
 # source files
 SRCS := barcodes.c input_buffer.c input_device.c \
 	send_http.c config.c string_utils.c \
-	cfg_logger.c logger.c 
+	cfg_logger.c logger.c handle_scanner.c
 
 # intermediate directory for generated object files
 OBJDIR := .objs

@@ -38,6 +38,7 @@ void set_defaults(struct config *config)
     config->scan_timeout = NEVER_TIMEOUT;
     config->log_threshold = LOG_DEBUG;
     config->log_to_syslog = FALSE;
+    config->daemonize = FALSE;
     strncpy(config->http_upload_verb, "POST", MAX_UPLOAD_VERB_LEN);
     strncpy(config->http_target_url, HTTP_TARGET_URL, MAX_TARGET_URL_LEN);
     strncpy(config->http_content_type, HTTP_CONTENT_TYPE, MAX_CONTENT_TYPE_LEN);
@@ -172,16 +173,17 @@ static int process_log_threshold(const char *value, struct context *context)
     return TRUE;
 }
 
-static int process_use_syslog(const char *value, struct context *context)
+static int process_boolean_param(const char *value, struct context *context,
+        const char *name,
+        const char *log_on_true, const char *log_on_false, int *storage)
 {
-    struct config *config = context->config;
     if (
             (0 == strcasecmp("TRUE", value)) ||
             (0 == strcasecmp("YES", value)))
     {
-        cfg_logger_log(context->logger, LOG_DEBUG, "Using syslog (%s:%i)",
+        cfg_logger_log(context->logger, LOG_DEBUG, "%s (%s:%i)", log_on_true,
                 context->filename, context->line_nr);
-        config->log_to_syslog = TRUE;
+        *storage = TRUE;
         return TRUE;
     }
 
@@ -189,17 +191,30 @@ static int process_use_syslog(const char *value, struct context *context)
             (0 == strcasecmp("FALSE", value)) ||
             (0 == strcasecmp("NO", value)))
     {
-        cfg_logger_log(context->logger, LOG_DEBUG,
-                "Using stdout/stderr (%s:%i)",
+        cfg_logger_log(context->logger, LOG_DEBUG, "%s (%s:%i)", log_on_false,
                 context->filename, context->line_nr);
-        config->log_to_syslog = FALSE;
+        *storage = FALSE;
         return TRUE;
     }
 
     cfg_logger_log(context->logger, LOG_ERR,
-            "Invalid entry '%s' for use_syslog in %s:%i", value,
+            "Invalid entry '%s' for %s in %s:%i", value, name,
             context->filename, context->line_nr);
     return FALSE;
+}
+
+static int process_use_syslog(const char *value, struct context *context)
+{
+    return process_boolean_param(value, context, "use_syslog",
+            "Using syslog", "Using stdout/stderr",
+            &(context->config->log_to_syslog));
+}
+
+static int process_daemonize(const char *value, struct context *context)
+{
+    return process_boolean_param(value, context, "daemonize",
+            "Will daemonize process", "Will stay in foreground",
+            &(context->config->daemonize));
 }
 
 static int process_http_upload_verb(const char *value, struct context *context)
@@ -275,6 +290,9 @@ static int process_param(const char* key, const char *value,
 
     if (0 == strcmp("use_syslog", key))
         return process_use_syslog(value, context);
+
+    if (0 == strcmp("daemonize", key))
+        return process_daemonize(value, context);
 
     if (0 == strcmp("http_upload_verb", key))
         return process_http_upload_verb(value, context);
