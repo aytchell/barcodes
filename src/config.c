@@ -11,11 +11,11 @@
 #define SCANNER_VENDOR_ID   -1
 #define SCANNER_PRODUCT_ID  -1
 
-#define NONPRIV_GROUP_ID    65534
-#define NONPRIV_USER_ID     65534
+#define NONPRIV_GROUP       "nobody"
+#define NONPRIV_USER        "nogroup"
 
 #define NEVER_TIMEOUT       -1
-#define JAMBEL_EVENT_URL    "http://localhost:8080/barcode"
+#define HTTP_TARGET_URL     "http://localhost:8080/barcode"
 #define HTTP_CONTENT_TYPE   "application/json"
 
 #define MAX_CONFIG_LINE_LEN 768
@@ -28,19 +28,29 @@ struct context
     struct config *config;
 };
 
+static int process_uid(const char *value, struct context *context);
+static int process_gid(const char *value, struct context *context);
+
 void set_defaults(struct config *config)
 {
     config->scanner_vendor_id = SCANNER_VENDOR_ID;
     config->scanner_product_id = SCANNER_PRODUCT_ID;
-    config->nonpriv_uid = NONPRIV_USER_ID;
-    config->nonpriv_gid = NONPRIV_GROUP_ID;
     config->scan_timeout = NEVER_TIMEOUT;
     config->log_threshold = LOG_DEBUG;
     config->log_to_syslog = FALSE;
     strncpy(config->http_upload_verb, "POST", MAX_UPLOAD_VERB_LEN);
-    strncpy(config->http_target_url, JAMBEL_EVENT_URL, MAX_TARGET_URL_LEN);
+    strncpy(config->http_target_url, HTTP_TARGET_URL, MAX_TARGET_URL_LEN);
     strncpy(config->http_content_type, HTTP_CONTENT_TYPE, MAX_CONTENT_TYPE_LEN);
     strncpy(config->http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
+
+    struct context context;
+    context.filename = NULL;
+    context.line_nr = 0;
+    context.logger = NULL;
+    context.config = config;
+
+    process_uid(NONPRIV_USER, &context);
+    process_gid(NONPRIV_GROUP, &context);
 }
 
 static int process_opt_int_entry(const char *value, struct context *context,
