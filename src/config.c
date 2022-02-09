@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 
 #include "config.h"
 #include "logger.h"
@@ -40,15 +43,18 @@ void set_defaults(struct config *config)
     strncpy(config->http_json_payload_name, "payload", MAX_PAYLOAD_NAME_LEN);
 }
 
-static int process_int_entry(const char *value, struct context *context,
-        const char *name, int *storage)
+static int process_opt_int_entry(const char *value, struct context *context,
+        const char *name, int *storage, int is_mandatory)
 {
     const int int_val = parse_uint16(value);
     if (int_val == -1)
     {
-        cfg_logger_log(context->logger, LOG_ERR,
-                "Invalid entry (%s) for '%s' in %s:%i",
-                value, name, context->filename, context->line_nr);
+        if (is_mandatory)
+        {
+            cfg_logger_log(context->logger, LOG_ERR,
+                    "Invalid entry (%s) for '%s' in %s:%i",
+                    value, name, context->filename, context->line_nr);
+        }
         return FALSE;
     }
 
@@ -57,6 +63,12 @@ static int process_int_entry(const char *value, struct context *context,
             int_val, name, context->filename, context->line_nr);
     *storage = int_val;
     return TRUE;
+}
+
+static int process_int_entry(const char *value, struct context *context,
+        const char *name, int *storage)
+{
+    return process_opt_int_entry(value, context, name, storage, TRUE);
 }
 
 static int process_vendor_id(const char *value, struct context *context)
@@ -73,14 +85,52 @@ static int process_product_id(const char *value, struct context *context)
 
 static int process_uid(const char *value, struct context *context)
 {
-    return process_int_entry(value, context, "uid",
-            &(context->config->nonpriv_uid));
+    if (process_opt_int_entry(value, context, "uid",
+            &(context->config->nonpriv_uid), FALSE))
+    {
+        // Found integer value which is used as user id
+        return TRUE;
+    }
+
+    struct passwd *pwd = getpwnam(value);
+    if (pwd != NULL)
+    {
+        cfg_logger_log(context->logger, LOG_DEBUG,
+                "Found '%s' (uid %i) for 'uid' in %s:%i",
+                value, pwd->pw_uid, context->filename, context->line_nr);
+        context->config->nonpriv_uid = pwd->pw_uid;
+        return TRUE;
+    }
+
+    cfg_logger_log(context->logger, LOG_ERR,
+            "Invalid entry (%s) for 'uid' in %s:%i",
+            value, context->filename, context->line_nr);
+    return FALSE;
 }
 
 static int process_gid(const char *value, struct context *context)
 {
-    return process_int_entry(value, context, "gid",
-            &(context->config->nonpriv_gid));
+    if (process_opt_int_entry(value, context, "gid",
+            &(context->config->nonpriv_gid), FALSE))
+    {
+        // Found integer value which is used as group id
+        return TRUE;
+    }
+
+    struct group *grp = getgrnam(value);
+    if (grp != NULL)
+    {
+        cfg_logger_log(context->logger, LOG_DEBUG,
+                "Found '%s' (gid %i) for 'gid' in %s:%i",
+                value, grp->gr_gid, context->filename, context->line_nr);
+        context->config->nonpriv_uid = grp->gr_gid;
+        return TRUE;
+    }
+
+    cfg_logger_log(context->logger, LOG_ERR,
+            "Invalid entry (%s) for 'gid' in %s:%i",
+            value, context->filename, context->line_nr);
+    return FALSE;
 }
 
 static int parse_log_level(const char *value)
@@ -284,6 +334,7 @@ int read_config_file(FILE *file, struct context *context)
         ++context->line_nr;
         if (!parse_raw_line(line, context))
         {
+            // we continue to (hopefully) load the correct logger config
             result = FALSE;
         }
     }

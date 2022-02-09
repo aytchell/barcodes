@@ -63,9 +63,9 @@ int parse_uint16(const char *value)
     }
 
     long val = strtol(value, &endptr, base);
-    if (*endptr != '\0') return FALSE;
-    if (val > SHRT_MAX) return FALSE;
-    if (val < 0) return FALSE;
+    if (*endptr != '\0') return -1;
+    if (val > SHRT_MAX) return -1;
+    if (val < 0) return -1;
     return val;
 }
 
