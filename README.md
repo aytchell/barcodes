@@ -4,7 +4,7 @@ This is a tiny program with the following task:
  1. Search all attached input devices for a barcode scanner (or RFID reader)
  1. Grab the device so all input is exclusively routed to this program
  1. Send each scanned barcode to a given REST endpoint
- 1. Repeat until scanner is unplugged
+ 1. Exit when scanner is unplugged
 
 ## Compiling
 
@@ -20,23 +20,33 @@ smaller platforms.
 
 ## Installation
 
-Copy built executable to `/usr/local/bin/barcodes`
+### Binary
+
+Installation has to be done manually. So it's mostly up to you where you
+store the binary. A reasonable location would be `/usr/local/bin/barcodes`
+
 Change owner to root: `chown root.root /usr/local/bin/barcodes`
 
 (the program will strip its root priviledges as soon as the correct input
 device is grabbed)
 
-Add this custom udev rule in `/etc/udev/rules.d/90-barcodes.rules`
+### Configuration
 
-```
-SUBSYSTEM=="usb", ACTION=="add", ATTRS{idVendor}=="28e9", ATTRS{idProduct}=="03d9", RUN+="/usr/local/bin/barcodes"
-```
+In the `src/` directory there a configuration file called `barcodes.conf`.
+Copy this to `/etc/`; that's where the application will search for it.
 
-Either reboot or call
-```
-# udevadm control --reload-rules && udevadm trigger
-```
+Have a look into the config file and change it according to your needs.
+The file contains some documentation which will guide you.
 
+### Automatic startup
+
+I experimented with `udev` to start the program as soon as the correct device
+is plugged in. Turns out that `udev` is able to `RUN` a program but this is
+done in a sandbox and the program will get killed after a short while.
+
+A better attempt would probably be to use the `systemd.device` mechanism but
+I didn't yet find time to figure this out (please add a PR if this works for
+you).
 
 ## License
 
